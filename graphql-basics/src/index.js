@@ -4,47 +4,61 @@ import { GraphQLServer } from 'graphql-yoga';
 
 //Demo user data 
 const users = [{
-	id: 1,
+	id: '1',
 	name: 'Cedric',
 	email: 'cedric@example.com',
-	age: 28
+	age: 28,
 }, {
-	id: 2,
+	id: '2',
 	name: 'Sarah',
 	email: 'sarah@example.com'
 }, {
-	id: 3,
+	id: '3',
 	name: 'Marcin',
 	email: 'marcin@example.com'
 }]
 
+//Demo post data
 const posts = [{
 	id: '1',
-	title: 'title a',
-	body: 'body a' ,
-	published: true
+	title: 'The holy bible',
+	body: 'God stuff' ,
+	published: true,
+	author: '1'
 }, {
 	id: '2',
-	title: 'title b',
-	body: 'body b' ,
-	published: false
+	title: 'Die Kunst des Kämpfens',
+	body: 'Fighting stuff' ,
+	published: false,
+	author: '1'
 }, {
 	id: '3',
-	title: 'title c',
-	body: 'body c' ,
-	published: true
+	title: 'Die Kunst des Verlierens',
+	body: 'Losing stuff' ,
+	published: true,
+	author: '2'
+}]
+
+const comments = [{
+	id: '1',
+	text: 'This is really great!',
+	author: '2'
+}, {
+	id: '2',
+	text: 'Why so serious?',
+	author: '1'
+}, {
+	id: '3',
+	text: 'xD xD xD LOL',
+	author: '3'
 }]
 
 // Type definitions (schema)
 const typeDefs = `
 	type Query {
 		users(query: String): [User!]! 
-		posts(posts: String): [Post!]!
-		greeting(name: String, position: String): String!
-		add(numbers: [Float!]!): Float!
-		grades: [Int]!
-		sven: User! 
-		post: Post!
+		posts(query: String): [Post!]!
+		comments(query:String): [Comment!]!
 	}
 
 	type User {
@@ -52,6 +66,8 @@ const typeDefs = `
 		name: String!
 		email: String!
 		age: Int
+		posts: [Post!]!
+		comments: [Comment!]!
 	}
 
 	type Post {
@@ -59,6 +75,13 @@ const typeDefs = `
 		title: String!
 		body: String!
 		published: Boolean!
+		author: User!
+	}
+
+	type Comment {
+		id: ID!
+		text: String!
+		author: User!
 	}
 ` 
 
@@ -75,43 +98,42 @@ const resolvers = {
 			})
 		},
 		posts(parent, args, ctx, info) {
-			return posts
-		},
-		greeting(parent, args, ctx, info) {
-			if (args.name && args.position) {
-				return `Hello ${args.name}! You are my favourite ${args.position}.`	
-			} else {
-				return 'Hello!'
+			if(!args.query) {
+				return posts
 			}
+			
+			return posts.filter((post => {
+				return post.title.toLowerCase().includes(args.query.toLowerCase()) || post.body.toLowerCase().includes(args.query.toLowerCase())
+			}))
 		},
-		add(parent, args, ctx, info) {
-			if(args.numbers.length === 0) {
-				return 0
-			}
-
-			return args.numbers.reduce((acc, curr)=> {
-				return acc + curr
-			})			
+		comments(parent, args, ctx, info) {
+			return comments
+		}
+	},
+	Post: {
+		author(parent, args, ctx, info) {
+			return users.find((user) => {
+				return user.id === parent.author
+			})
+		}
+	},
+	User: {
+		posts(parent, args, ctx, info) {
+			return posts.filter((post) => {
+				return post.author === parent.id
+			})
 		},
-		grades(parent, args, ctx, info) {
-			return [99, 80, 93]
-		},
-		sven() {
-			return {
-				//that's the place where you can perfom db actions, atm still hard coded :P
-				id: 'abc123',
-				name: 'Sven',
-				email: 'sven@example.com',
-				age: 26
-			}
-		},
-		post() {
-			return {
-				id: 'cba321',
-				title: 'Cedrics GraphQL Workshop',
-				body: 'Fuck me, that is awesome!',
-				published: true
-			}
+		comments(parent, args, ctx, info) {
+			return comments.filter((comment) => {
+				return comment.author === parent.id
+			})
+		}
+	},
+	Comment: {
+		author(parent, args, ctx, info) {
+			return users.find((user) => {
+				return user.id === parent.author
+			})
 		}
 	}
 }
